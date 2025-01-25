@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #ffe6e6;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #webcam-container {
+            margin-top: 20px;
+        }
+        #label-container div {
+            font-size: 20px;
+            font-weight: bold;
+            color: #444;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Teachable Machine Detection</h1>
+        <button onclick="init()">Start</button>
+        <div id="webcam-container"></div>
+        <div id="label-container"></div>
+        <button onclick="fetchPredictions()">Show Predictions</button>
+        <div id="prediction-list"></div>
+    </div>
+
+    <!-- مكتبات TensorFlow و Teachable Machine -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script>
+        const URL = "https://teachablemachine.withgoogle.com/models/P2-TuqkQi/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        // بدء تشغيل الكاميرا وتحميل النموذج
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true;
+            webcam = new tmImage.Webcam(300, 300, flip);
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+
+        // تحديث اللقطات والتنبؤات في كل إطار
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        // تنفيذ التنبؤات باستخدام النموذج
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < maxPredictions; i++) {
+                const classPrediction = prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(2) + "%";
+                labelContainer.childNodes[i].innerHTML = classPrediction;
+
+                // إرسال التنبؤ إلى السيرفر إذا كانت الثقة أكبر من 80%
+                if (prediction[i].probability > 0.8) {
+                    sendPredictionToServer(prediction[i].className, prediction[i].probability);
+                }
+            }
+        }
+
+        // إرسال التنبؤات إلى Flask عبر API
+        async function sendPredictionToServer(label, probability) {
+            const data = { label: label, probability: probability.toFixed(2) };
+            await fetch('http://127.0.0.1:5000/save_prediction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(response => response.json())
+              .then(data => console.log(data.message))
+              .catch(error => console.error('Error:', error));
+        }
+
+        // جلب جميع التنبؤات المخزنة في قاعدة البيانات
+        async function fetchPredictions() {
+            const response = await fetch('http://127.0.0.1:5000/get_predictions');
+            const data = await response.json();
+
+            let output = "<h2>Stored Predictions:</h2><ul>";
+            data.forEach(prediction => {
+                output += <li>${prediction[1]} - ${prediction[2]}</li>;
+            });
+            output += "</ul>";
+
+            document.getElementById('prediction-list').innerHTML = output;
+        }
+    </script>
+</body>
+</html>
