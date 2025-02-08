@@ -59,7 +59,7 @@
         <div id="prediction-list"></div>
     </div>
 
-    <!-- مكتبات TensorFlow و Teachable Machine -->
+   
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
@@ -68,7 +68,7 @@
 
         let model, webcam, labelContainer, maxPredictions;
 
-        // بدء تشغيل الكاميرا وتحميل النموذج
+        
         async function init() {
             const modelURL = URL + "model.json";
             const metadataURL = URL + "metadata.json";
@@ -89,28 +89,28 @@
             }
         }
 
-        // تحديث اللقطات والتنبؤات في كل إطار
+       
         async function loop() {
             webcam.update();
             await predict();
             window.requestAnimationFrame(loop);
         }
 
-        // تنفيذ التنبؤات باستخدام النموذج
+        
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
                 const classPrediction = prediction[i].className + ": " + (prediction[i].probability * 100).toFixed(2) + "%";
                 labelContainer.childNodes[i].innerHTML = classPrediction;
 
-                // إرسال التنبؤ إلى السيرفر إذا كانت الثقة أكبر من 80%
+                
                 if (prediction[i].probability > 0.8) {
                     sendPredictionToServer(prediction[i].className, prediction[i].probability);
                 }
             }
         }
 
-        // إرسال التنبؤات إلى Flask عبر API
+        
         async function sendPredictionToServer(label, probability) {
             const data = { label: label, probability: probability.toFixed(2) };
             await fetch('http://127.0.0.1:5000/save_prediction', {
@@ -122,7 +122,7 @@
               .catch(error => console.error('Error:', error));
         }
 
-        // جلب جميع التنبؤات المخزنة في قاعدة البيانات
+       
         async function fetchPredictions() {
             const response = await fetch('http://127.0.0.1:5000/get_predictions');
             const data = await response.json();
