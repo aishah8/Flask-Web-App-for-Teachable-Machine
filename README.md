@@ -36,3 +36,5 @@ Workflow
 
  7: I ran the application using Python by typing python app.py in the command prompt. After running, the application can be accessed through the local link 
  http://127.0.0.1:5000
+
+https://github.com/aishah8/Flask-Web-App-for-Teachable-Machine/blob/630bfb6c25d9400266da775193973304fb97d227/im1.png
